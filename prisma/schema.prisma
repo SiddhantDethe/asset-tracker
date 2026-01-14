@@ -1,0 +1,126 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+enum Role {
+  admin
+  user
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+  RETIRED
+}
+
+enum AssetCategory {
+  LAPTOP
+  LICENSE
+  SERVER
+  OFFICE_KEY
+  OTHER
+}
+
+enum RequestType {
+  REQUEST
+  RETURN
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RequestInitiator {
+  USER
+  ADMIN
+}
+
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  email     String?  @unique
+  role      Role     @default(user)
+
+  sessions  Session[]
+  assets    AssetAssignment[]
+  requests  AssetRequest[]
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
+model Asset {
+  id             Int           @id @default(autoincrement())
+  name           String
+  category       AssetCategory
+  description    String?
+
+  totalCount     Int           @default(1)
+  availableCount Int           @default(1)
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  assignments    AssetAssignment[]
+  requests       AssetRequest[]
+}
+
+
+
+model AssetAssignment {
+  id         Int       @id @default(autoincrement())
+  assetId    Int
+  userId     Int
+  assignedAt DateTime  @default(now())
+  returnedAt DateTime?
+
+  asset Asset @relation(fields: [assetId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([assetId])
+  @@index([userId])
+}
+
+
+model AssetRequest {
+  id           Int              @id @default(autoincrement())
+  assetId      Int
+  userId       Int
+  type         RequestType
+  status       RequestStatus    @default(PENDING)
+  initiator    RequestInitiator @default(USER)
+  requestedAt  DateTime         @default(now())
+  resolvedAt   DateTime?
+
+  asset Asset @relation(fields: [assetId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([assetId])
+  @@index([userId])
+}
