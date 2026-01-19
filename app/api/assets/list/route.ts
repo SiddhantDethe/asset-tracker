@@ -1,20 +1,32 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
 
 export async function GET() {
   try {
-    await requireAdmin();
-
     const assets = await prisma.asset.findMany({
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        description: true,
+        totalCount: true,
+        availableCount: true,
+        createdAt: true,
+      },
     });
 
-    return NextResponse.json(assets);
-  } catch {
+    return NextResponse.json(assets, {
+      headers: {
+        "Cache-Control": "no-store", // important for Render
+      },
+    });
+  } catch (error) {
+    console.error("ASSETS LIST API ERROR:", error);
+
     return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
+      { error: "Failed to fetch assets" },
+      { status: 500 }
     );
   }
 }

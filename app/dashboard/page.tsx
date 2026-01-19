@@ -1,81 +1,50 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { prisma } from "@/lib/prisma";
 import Card from "@/app/components/ui/Card";
-// import Badge from "@/app/components/ui/Badge";
 import Button from "@/app/components/ui/Button";
 
-export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+type AssignedAsset = {
+  id: number;
+  assignedAt: string;
+  asset: {
+    id: number;
+    name: string;
+    category: string;
+  };
+};
 
-  if (!session?.user?.id) {
-    return <p>Not authenticated</p>;
+type Asset = {
+  id: number;
+  name: string;
+  category: string;
+  totalCount: number;
+  availableCount: number;
+};
+
+export default async function DashboardPage() {
+  /* =========================
+     1️⃣ FETCH ASSIGNED ASSETS
+  ========================= */
+  const myRes = await fetch(
+    `${process.env.NEXTAUTH_URL}/api/assets/my`,
+    { cache: "no-store" }
+  );
+
+  if (!myRes.ok) {
+    return <p>Unauthorized</p>;
   }
 
-  const userId = Number(session.user.id);
+  const assignments: AssignedAsset[] = await myRes.json();
 
   /* =========================
-     1️⃣ ASSIGNED ASSETS
+     2️⃣ FETCH ALL ASSETS
   ========================= */
-
-  const assignments = await prisma.assetAssignment.findMany({
-    where: {
-      userId,
-      returnedAt: null,
-    },
-    include: {
-      asset: true,
-    },
-    orderBy: {
-      assignedAt: "desc",
-    },
-  });
-
-  /* =========================
-     2️⃣ PENDING RETURN REQUESTS
-  ========================= */
-
-  const pendingReturnRequests = await prisma.assetRequest.findMany({
-    where: {
-      userId,
-      type: "RETURN",
-      status: "PENDING",
-    },
-    select: {
-      assetId: true,
-    },
-  });
-
-  const pendingReturnAssetIds = new Set(
-    pendingReturnRequests.map((r) => r.assetId)
+  const assetsRes = await fetch(
+    `${process.env.NEXTAUTH_URL}/api/assets/list`,
+    { cache: "no-store" }
   );
 
-  /* =========================
-     3️⃣ ALL ASSETS
-  ========================= */
-
-  const allAssets = await prisma.asset.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-
-  /* =========================
-     4️⃣ PENDING NEW ASSET REQUESTS
-  ========================= */
-
-  const pendingAssetRequests = await prisma.assetRequest.findMany({
-    where: {
-      userId,
-      type: "REQUEST",
-      status: "PENDING",
-    },
-    select: {
-      assetId: true,
-    },
-  });
-
-  const pendingRequestAssetIds = new Set(
-    pendingAssetRequests.map((r) => r.assetId)
-  );
+  const allAssets: Asset[] = assetsRes.ok
+    ? await assetsRes.json()
+    : [];
 
   return (
     <div className="space-y-12">
@@ -93,54 +62,44 @@ export default async function DashboardPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {assignments.map((a) => {
-            const returnPending =
-              pendingReturnAssetIds.has(a.assetId);
+          {assignments.map((a) => (
+            <Card key={a.id}>
+              <div className="space-y-2">
+                <h2 className="font-semibold">
+                  {a.asset.name}
+                </h2>
 
-            return (
-              <Card key={a.id}>
-                <div className="space-y-2">
-                  <h2 className="font-semibold">
-                    {a.asset.name}
-                  </h2>
+                <p className="text-sm text-gray-400">
+                  Category: {a.asset.category}
+                </p>
 
-                  <p className="text-sm text-gray-400">
-                    Category: {a.asset.category}
-                  </p>
+                <p className="text-xs text-gray-500">
+                  Assigned on:{" "}
+                  {new Date(a.assignedAt).toDateString()}
+                </p>
 
-                  <p className="text-xs text-gray-500">
-                    Assigned on:{" "}
-                    {a.assignedAt.toDateString()}
-                  </p>
+                <form
+                  action="/api/requests/create"
+                  method="POST"
+                >
+                  <input
+                    type="hidden"
+                    name="assetId"
+                    value={a.asset.id}
+                  />
+                  <input
+                    type="hidden"
+                    name="type"
+                    value="RETURN"
+                  />
 
-                  {returnPending ? (
-                    <p className="text-xs text-orange-500">
-                      Return request pending
-                    </p>
-                  ) : (
-                    <form
-                      action="/api/requests/create"
-                      method="POST"
-                    >
-                      <input
-                        type="hidden"
-                        name="assetId"
-                        value={a.assetId}
-                      />
-                      <input
-                        type="hidden"
-                        name="type"
-                        value="RETURN"
-                      />
-                      <Button type="submit">
-                        Request Return
-                      </Button>
-                    </form>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
+                  <Button type="submit">
+                    Request Return
+                  </Button>
+                </form>
+              </div>
+            </Card>
+          ))}
         </div>
       </section>
 
@@ -154,9 +113,6 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {allAssets.map((asset) => {
-            const alreadyRequested =
-              pendingRequestAssetIds.has(asset.id);
-
             const isAvailable =
               asset.availableCount > 0;
 
@@ -172,34 +128,31 @@ export default async function DashboardPage() {
                   </p>
 
                   <p className="text-xs text-gray-400">
-                    Available: {asset.availableCount} / {asset.totalCount}
+                    Available:{" "}
+                    {asset.availableCount} /{" "}
+                    {asset.totalCount}
                   </p>
 
                   {isAvailable ? (
-                    alreadyRequested ? (
-                      <p className="text-xs text-orange-500">
-                        Request pending
-                      </p>
-                    ) : (
-                      <form
-                        action="/api/requests/create"
-                        method="POST"
-                      >
-                        <input
-                          type="hidden"
-                          name="assetId"
-                          value={asset.id}
-                        />
-                        <input
-                          type="hidden"
-                          name="type"
-                          value="REQUEST"
-                        />
-                        <Button type="submit">
-                          Request Asset
-                        </Button>
-                      </form>
-                    )
+                    <form
+                      action="/api/requests/create"
+                      method="POST"
+                    >
+                      <input
+                        type="hidden"
+                        name="assetId"
+                        value={asset.id}
+                      />
+                      <input
+                        type="hidden"
+                        name="type"
+                        value="REQUEST"
+                      />
+
+                      <Button type="submit">
+                        Request Asset
+                      </Button>
+                    </form>
                   ) : (
                     <p className="text-xs text-red-500">
                       Asset not available

@@ -1,11 +1,25 @@
-import { prisma } from "@/lib/prisma";
+
 
 export default async function HomePage() {
-  const assets = await prisma.asset.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const res = await fetch(
+    `${process.env.NEXTAUTH_URL}/api/assets/list`,
+    { cache: "no-store" }
+  );
+
+  if (!res.ok) {
+    return (
+      <div className="text-center text-red-500">
+        Failed to load assets
+      </div>
+    );
+  }
+
+  const assets: {
+    id: number;
+    name: string;
+    category: string;
+    description?: string | null;
+  }[] = await res.json();
 
   return (
     <div className="space-y-12">
@@ -13,7 +27,7 @@ export default async function HomePage() {
       <section className="text-center space-y-4">
         <h1 className="text-4xl font-bold">
           Company Asset Manager
-        </h1>
+        </h1> 
 
         <p className="text-gray-400 max-w-xl mx-auto">
           Browse available company assets including laptops,

@@ -4,20 +4,41 @@ import { requireAuth } from "@/lib/auth";
 
 export async function GET() {
   try {
+    
     const session = await requireAuth();
+
+    const userId = Number(session.user.id);
 
     const assets = await prisma.assetAssignment.findMany({
       where: {
-        userId: session.user.id,
+        userId,
         returnedAt: null,
       },
-      include: {
-        asset: true,
+      orderBy: {
+        assignedAt: "desc",
+      },
+      select: {
+        id: true,
+        assignedAt: true,
+        asset: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            description: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(assets);
-  } catch {
+return NextResponse.json(assets, {
+      headers: {
+        "Cache-Control": "no-store", // IMPORTANT on Render
+      },
+    });
+    } catch (error){
+        console.error("MY ASSETS API ERROR:", error);
+
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }
