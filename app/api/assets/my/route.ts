@@ -4,9 +4,10 @@ import { requireAuth } from "@/lib/auth";
 
 export async function GET() {
   try {
-    
+    // 🔐 Ensure user is authenticated
     const session = await requireAuth();
 
+    // 🔑 Convert string → number for Prisma
     const userId = Number(session.user.id);
 
     const assets = await prisma.assetAssignment.findMany({
@@ -31,16 +32,16 @@ export async function GET() {
       },
     });
 
-return NextResponse.json(assets, {
+    return NextResponse.json(assets, {
       headers: {
         "Cache-Control": "no-store", // IMPORTANT on Render
       },
     });
-    } catch (error){
-        console.error("MY ASSETS API ERROR:", error);
+  } catch (error) {
+    console.error("MY ASSETS API ERROR:", error);
 
     return NextResponse.json(
-      { error: "Unauthorized" },
+      { error: "Unauthorized or failed to fetch assets" },
       { status: 401 }
     );
   }

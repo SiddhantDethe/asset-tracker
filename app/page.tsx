@@ -1,5 +1,3 @@
-
-
 export default async function HomePage() {
   const res = await fetch(
     `${process.env.NEXTAUTH_URL}/api/assets/list`,
@@ -27,7 +25,7 @@ export default async function HomePage() {
       <section className="text-center space-y-4">
         <h1 className="text-4xl font-bold">
           Company Asset Manager
-        </h1> 
+        </h1>
 
         <p className="text-gray-400 max-w-xl mx-auto">
           Browse available company assets including laptops,
@@ -71,24 +69,13 @@ export default async function HomePage() {
                     {asset.description}
                   </p>
                 )}
-
-                {/* <span
-                  className={`inline-block text-xs px-3 py-1 rounded-full
-                    ${
-                      asset.status === "AVAILABLE"
-                        ? "bg-green-600/20 text-green-400"
-                        : "bg-orange-600/20 text-orange-400"
-                    }
-                  `}
-                >
-                  {asset.status}
-                </span> */}
               </div>
             </div>
           ))}
         </div>
       </section>
 
+      {/* CTA */}
       <section className="text-center pt-10">
         <p className="text-gray-400 mb-4">
           Want to request an asset?
@@ -101,7 +88,10 @@ export default async function HomePage() {
           Login to Request Assets
         </a>
 
-        <a href="/register" className="inline-block gap-2 bg-gray-700 px-6 py-3 rounded-xl text-white hover:bg-gray-800 transition ml-4">
+        <a
+          href="/register"
+          className="inline-block bg-gray-700 px-6 py-3 rounded-xl text-white hover:bg-gray-800 transition ml-4"
+        >
           Register
         </a>
       </section>

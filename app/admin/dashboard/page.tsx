@@ -4,7 +4,7 @@ import type { Asset } from "@prisma/client";
 
 export default async function AdminDashboard() {
   const res = await fetch(
-    `${process.env.NEXTAUTH_URL}/api/admin/assets`,
+    `${process.env.NEXTAUTH_URL}/api/assets/list`,
     { cache: "no-store" }
   );
 
