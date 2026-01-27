@@ -1,22 +1,14 @@
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
 import AssetTable from "@/app/components/AssetTable";
 import CreateAssetForm from "@/app/components/CreateAssetForm";
-import type { Asset } from "@prisma/client";
 
 export default async function AdminDashboard() {
-  const res = await fetch(
-    `${process.env.NEXTAUTH_URL}/api/assets/list`,
-    { cache: "no-store" }
-  );
+  await requireAdmin();
 
-  if (!res.ok) {
-    return (
-      <p className="text-red-500">
-        Failed to load admin assets
-      </p>
-    );
-  }
-
-  const assets: Asset[] = await res.json();
+  const assets = await prisma.asset.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div className="space-y-6">
